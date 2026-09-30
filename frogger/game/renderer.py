@@ -25,6 +25,8 @@ COLOR_FROG = (80, 220, 100)
 COLOR_FROG_HIT = (255, 60, 60)
 COLOR_VEHICLE = (220, 80, 70)
 COLOR_TEXT = (255, 255, 255)
+COLOR_TIME_LOW = (255, 90, 90)
+COLOR_BANNER = (255, 220, 80)
 
 
 def draw_scene(surface, frog, vehicles, frog_color=COLOR_FROG):
@@ -51,6 +53,7 @@ def draw_text(surface, font, text, pos, color=COLOR_TEXT):
 
 
 def draw_banner(surface, font, text):
-    surf = font.render(text, True, (255, 220, 80))
+    surf = font.render(text, True, COLOR_BANNER)
     rect = surf.get_rect(center=(surface.get_width() // 2, surface.get_height() // 2))
+    pygame.draw.rect(surface, COLOR_BG, rect.inflate(24, 16), border_radius=6)  # keeps text readable over traffic
     surface.blit(surf, rect)

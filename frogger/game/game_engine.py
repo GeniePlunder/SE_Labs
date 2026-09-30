@@ -8,8 +8,13 @@ Game states:
               player can see what happened, then respawns (or game over)
   game_over - no lives left; only R works
   won       - frog reached the goal; only R works
+
+Each attempt (a new game, or a respawn after losing a life) gets a
+30-second countdown. Running out of time costs a life, exactly like
+being hit.
 """
 
+import math
 import random
 
 import pygame
@@ -23,7 +28,11 @@ from game.renderer import (
 
 LANE_SPEEDS = [1.5, -2, 2, -2.5, 1.5, -2]   # one entry per road row, alternating direction
 
+FPS = 60                 # must match clock.tick() in main.py
 STARTING_LIVES = 3
+TIME_LIMIT_SECONDS = 30
+TIME_LIMIT_FRAMES = TIME_LIMIT_SECONDS * FPS
+LOW_TIME_SECONDS = 5     # timer turns red at or below this
 HIT_PAUSE_FRAMES = 45    # ~0.75 s at 60 FPS: how long the hit is shown before respawn
 HIT_BLINK_FRAMES = 6     # frog alternates colour every 6 frames while hit
 
@@ -44,6 +53,8 @@ class GameEngine:
         self.score = 0
         self.state = STATE_PLAYING
         self.hit_timer = 0
+        self.time_left = TIME_LIMIT_FRAMES
+        self.fail_reason = ""
 
     def _build_entities(self):
         start_col = GRID_COLS // 2
@@ -102,23 +113,28 @@ class GameEngine:
             v.update(road_width_px=WIDTH)
 
         if self.state == STATE_PLAYING:
+            self.time_left -= 1
             if check_collision(self.frog, self.vehicles):
-                self.lose_life()
+                self.lose_life("Splat!")
             elif self.frog.row == GOAL_ROW:
                 self._win()
+            elif self.time_left <= 0:
+                self.lose_life("Time's up!")
 
         elif self.state == STATE_HIT:
             self.hit_timer -= 1
             if self.hit_timer <= 0:
                 if self.lives > 0:
                     self.frog.reset()
+                    self.time_left = TIME_LIMIT_FRAMES   # new attempt, fresh 30 s
                     self.state = STATE_PLAYING
                 else:
                     self.state = STATE_GAME_OVER   # frog stays where it was hit
 
-    def lose_life(self):
-        """One failed attempt. Public so the Task 4 timer can reuse it."""
+    def lose_life(self, reason):
+        """One failed attempt (hit by a vehicle or out of time)."""
         self.lives -= 1
+        self.fail_reason = reason
         self.state = STATE_HIT
         self.hit_timer = HIT_PAUSE_FRAMES
 
@@ -139,9 +155,17 @@ class GameEngine:
 
         renderer.draw_scene(surface, self.frog, self.vehicles, frog_color)
         renderer.draw_text(surface, font, f"Lives: {self.lives}   Score: {self.score}", (10, 14))
+
+        seconds_left = max(0, math.ceil(self.time_left / FPS))
+        time_color = renderer.COLOR_TEXT
+        if self.state == STATE_PLAYING and seconds_left <= LOW_TIME_SECONDS:
+            time_color = renderer.COLOR_TIME_LOW
+        renderer.draw_text(surface, font, f"Time: {seconds_left:2d}", (WIDTH - 110, 14), time_color)
         renderer.draw_text(surface, font, "Arrow keys to move. R to restart.", (10, HEIGHT - 24))
 
-        if self.state == STATE_GAME_OVER:
+        if self.state == STATE_HIT:
+            renderer.draw_banner(surface, font, self.fail_reason)
+        elif self.state == STATE_GAME_OVER:
             renderer.draw_banner(surface, font, "Game Over - press R to restart")
         elif self.state == STATE_WON:
             renderer.draw_banner(surface, font, "You Won! - press R to play again")
