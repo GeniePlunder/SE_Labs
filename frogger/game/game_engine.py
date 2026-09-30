@@ -23,7 +23,7 @@ from game.frog import Frog
 from game.vehicle import Vehicle
 from game.collisions import check_collision
 from game.renderer import (
-    GRID_COLS, GRID_ROWS, GOAL_ROW, ROAD_ROWS, START_ROW, CELL_SIZE, WIDTH, HEIGHT,
+    GRID_COLS, GOAL_ROW, ROAD_ROWS, START_ROW, CELL_SIZE, WIDTH, HEIGHT,
 )
 
 LANE_SPEEDS = [1.5, -2, 2, -2.5, 1.5, -2]   # one entry per road row, alternating direction
@@ -107,6 +107,12 @@ class GameEngine:
             self.frog.move(-1, 0)
         elif key == pygame.K_RIGHT:
             self.frog.move(1, 0)
+        else:
+            return
+        # Check every cell the frog lands on, not just where it ends up
+        # this frame - otherwise two quick hops in one frame could skip
+        # a vehicle or step onto and off the goal unnoticed.
+        self._check_frog()
 
     def update(self):
         for v in self.vehicles:
@@ -114,11 +120,8 @@ class GameEngine:
 
         if self.state == STATE_PLAYING:
             self.time_left -= 1
-            if check_collision(self.frog, self.vehicles):
-                self.lose_life("Splat!")
-            elif self.frog.row == GOAL_ROW:
-                self._win()
-            elif self.time_left <= 0:
+            self._check_frog()   # vehicles moved, so re-check even if the frog didn't
+            if self.state == STATE_PLAYING and self.time_left <= 0:
                 self.lose_life("Time's up!")
 
         elif self.state == STATE_HIT:
@@ -130,6 +133,13 @@ class GameEngine:
                     self.state = STATE_PLAYING
                 else:
                     self.state = STATE_GAME_OVER   # frog stays where it was hit
+
+    def _check_frog(self):
+        """Collision first, then goal. Only called while playing."""
+        if check_collision(self.frog, self.vehicles):
+            self.lose_life("Splat!")
+        elif self.frog.row == GOAL_ROW:
+            self._win()
 
     def lose_life(self, reason):
         """One failed attempt (hit by a vehicle or out of time)."""
