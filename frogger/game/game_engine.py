@@ -2,10 +2,12 @@
 GameEngine: owns the frog and all vehicles, and runs one frame's worth
 of game logic.
 
-Starter version: the frog can move, hop across the road, and reach the
-goal - but there's no lives system, no score, and no timer. Collision
-detection also has a known bug (see game/collisions.py) that Task 1
-asks you to fix.
+Game states:
+  playing   - normal play, arrow keys move the frog
+  hit       - frog was just hit; it flashes in place for a moment so the
+              player can see what happened, then respawns (or game over)
+  game_over - no lives left; only R works
+  won       - frog reached the goal; only R works
 """
 
 import random
@@ -21,10 +23,27 @@ from game.renderer import (
 
 LANE_SPEEDS = [1.5, -2, 2, -2.5, 1.5, -2]   # one entry per road row, alternating direction
 
+STARTING_LIVES = 3
+HIT_PAUSE_FRAMES = 45    # ~0.75 s at 60 FPS: how long the hit is shown before respawn
+HIT_BLINK_FRAMES = 6     # frog alternates colour every 6 frames while hit
+
+STATE_PLAYING = "playing"
+STATE_HIT = "hit"
+STATE_GAME_OVER = "game_over"
+STATE_WON = "won"
+
 
 class GameEngine:
     def __init__(self):
+        self.reset_game()
+
+    def reset_game(self):
+        """Full restart (R key): new frog, new vehicles, all state reset."""
         self._build_entities()
+        self.lives = STARTING_LIVES
+        self.score = 0
+        self.state = STATE_PLAYING
+        self.hit_timer = 0
 
     def _build_entities(self):
         start_col = GRID_COLS // 2
@@ -63,6 +82,12 @@ class GameEngine:
                                               height=CELL_SIZE - 8, speed=speed))
 
     def handle_keydown(self, key):
+        if key == pygame.K_r:
+            self.reset_game()
+            return
+        if self.state != STATE_PLAYING:
+            return  # no hopping while hit, after game over, or after a win
+
         if key == pygame.K_UP:
             self.frog.move(0, -1)
         elif key == pygame.K_DOWN:
@@ -71,20 +96,52 @@ class GameEngine:
             self.frog.move(-1, 0)
         elif key == pygame.K_RIGHT:
             self.frog.move(1, 0)
-        elif key == pygame.K_r:
-            self._build_entities()
 
     def update(self):
         for v in self.vehicles:
             v.update(road_width_px=WIDTH)
 
-        if check_collision(self.frog, self.vehicles):
-            self.frog.reset()
+        if self.state == STATE_PLAYING:
+            if check_collision(self.frog, self.vehicles):
+                self.lose_life()
+            elif self.frog.row == GOAL_ROW:
+                self._win()
 
-        if self.frog.row == GOAL_ROW:
-            self.frog.reset()
+        elif self.state == STATE_HIT:
+            self.hit_timer -= 1
+            if self.hit_timer <= 0:
+                if self.lives > 0:
+                    self.frog.reset()
+                    self.state = STATE_PLAYING
+                else:
+                    self.state = STATE_GAME_OVER   # frog stays where it was hit
+
+    def lose_life(self):
+        """One failed attempt. Public so the Task 4 timer can reuse it."""
+        self.lives -= 1
+        self.state = STATE_HIT
+        self.hit_timer = HIT_PAUSE_FRAMES
+
+    def _win(self):
+        self.score += 1          # runs once: state leaves PLAYING immediately
+        self.frog.reset()
+        self.state = STATE_WON
 
     def draw(self, surface, font):
         from game import renderer
-        renderer.draw_scene(surface, self.frog, self.vehicles)
+
+        frog_color = renderer.COLOR_FROG
+        if self.state == STATE_HIT:
+            blink_on = (self.hit_timer // HIT_BLINK_FRAMES) % 2 == 0
+            frog_color = renderer.COLOR_FROG_HIT if blink_on else renderer.COLOR_TEXT
+        elif self.state == STATE_GAME_OVER:
+            frog_color = renderer.COLOR_FROG_HIT
+
+        renderer.draw_scene(surface, self.frog, self.vehicles, frog_color)
+        renderer.draw_text(surface, font, f"Lives: {self.lives}   Score: {self.score}", (10, 14))
         renderer.draw_text(surface, font, "Arrow keys to move. R to restart.", (10, HEIGHT - 24))
+
+        if self.state == STATE_GAME_OVER:
+            renderer.draw_banner(surface, font, "Game Over - press R to restart")
+        elif self.state == STATE_WON:
+            renderer.draw_banner(surface, font, "You Won! - press R to play again")
