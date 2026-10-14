@@ -1,0 +1,27 @@
+************* Module energy_system
+energy_system.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+energy_system.py:12:0: C0116: Missing function or method docstring (missing-function-docstring)
+energy_system.py:12:0: W0102: Dangerous default value [] as argument (dangerous-default-value)
+energy_system.py:17:0: C0116: Missing function or method docstring (missing-function-docstring)
+energy_system.py:19:4: R1705: Unnecessary "elif" after "return", replace only that "elif" with "if" (no-else-return)
+energy_system.py:26:0: C0116: Missing function or method docstring (missing-function-docstring)
+energy_system.py:27:4: W0603: Using the global statement (global-statement)
+energy_system.py:32:0: C0116: Missing function or method docstring (missing-function-docstring)
+energy_system.py:39:0: C0116: Missing function or method docstring (missing-function-docstring)
+energy_system.py:40:4: W0603: Using the global statement (global-statement)
+energy_system.py:44:4: W0702: No exception type(s) specified (bare-except)
+energy_system.py:42:12: W1514: Using open without explicitly specifying an encoding (unspecified-encoding)
+energy_system.py:42:12: R1732: Consider using 'with' for resource-allocating operations (consider-using-with)
+energy_system.py:47:0: C0116: Missing function or method docstring (missing-function-docstring)
+energy_system.py:48:8: W1514: Using open without explicitly specifying an encoding (unspecified-encoding)
+energy_system.py:48:8: R1732: Consider using 'with' for resource-allocating operations (consider-using-with)
+energy_system.py:52:0: C0116: Missing function or method docstring (missing-function-docstring)
+energy_system.py:59:10: C0209: Formatting a regular string which could be an f-string (consider-using-f-string)
+energy_system.py:60:10: C0209: Formatting a regular string which could be an f-string (consider-using-f-string)
+energy_system.py:63:27: W0123: Use of eval (eval-used)
+energy_system.py:66:10: C0209: Formatting a regular string which could be an f-string (consider-using-f-string)
+energy_system.py:2:0: W0611: Unused import sys (unused-import)
+
+-----------------------------------
+Your code has been rated at 6.14/10
+
